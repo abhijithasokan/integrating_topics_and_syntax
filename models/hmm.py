@@ -128,7 +128,7 @@ class HMM:
             c = HMM.HMM_CLASS_FOR_START_END_MARKER
             theta_d = np.random.dirichlet(self.alpha * np.ones(self.num_topics))
             for _ in range(doc_len):
-                if c == 1:
+                if c == HMM_CLASS_FOR_TOPIC:
                     topic = int(np.random.multinomial(1, theta_d).argmax())
                     word = int(np.random.multinomial(1, topic_prob[topic]).argmax())
                 else:
@@ -162,7 +162,7 @@ class HMMTrainer:
         self.hmm = hmm
 
 
-    def train(self, docs: list, num_iterations: int = 100):
+    def train(self, docs: list, num_iterations: int):
         self._init_params(docs)
         for _ in tqdm.tqdm(range(num_iterations)):
             self._train_loop(docs)

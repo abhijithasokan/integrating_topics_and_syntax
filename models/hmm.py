@@ -1,5 +1,6 @@
 import pickle
 import os
+import shutil
 
 import numpy as np
 import tqdm
@@ -46,7 +47,7 @@ class HMM:
         
         self.wc_topics = np.zeros((T)) # n_z
         self.wc_classes = np.zeros((C)) # n_c
-        self.transision_count = np.zeros((C, C))
+        self.transition_count = np.zeros((C, C))
 
         
     def save(self, path: str):
@@ -58,7 +59,7 @@ class HMM:
             wordwise_count_in_class=self.wordwise_count_in_class,
             wc_topics=self.wc_topics,
             wc_classes=self.wc_classes,
-            transision_count=self.transision_count
+            transition_count=self.transition_count
         )
         non_np_items = {
             'vocab_map': self.vocab_map,
@@ -94,7 +95,7 @@ class HMM:
         hmm.wordwise_count_in_class = npz['wordwise_count_in_class']
         hmm.wc_topics = npz['wc_topics']
         hmm.wc_classes = npz['wc_classes']
-        hmm.transision_count = npz['transision_count']
+        hmm.transition_count = npz['transition_count']
 
         return hmm
 
@@ -112,7 +113,7 @@ class HMM:
         filtered_topic_prob[:, supressed_word_ids] = 0
         topic_prob = filtered_topic_prob / np.sum(filtered_topic_prob, axis=1, keepdims=True)
 
-        trans_prob = self.transision_count / np.sum(self.transision_count, axis=1, keepdims=True)
+        trans_prob = self.transition_count / np.sum(self.transition_count, axis=1, keepdims=True)
         return trans_prob, class_prob, topic_prob
 
 
@@ -158,14 +159,21 @@ class HMM:
 
 
 class HMMTrainer:
-    def __init__(self, hmm: HMM):
+    def __init__(self, hmm: HMM, model_save_path: str = None, save_every: int = 200, only_keep_latest: bool = True):
         self.hmm = hmm
+        # below are settings to control how the model is saved
+        self.model_save_path = model_save_path
+        self.save_every = save_every
+        self.only_keep_latest = only_keep_latest
 
 
     def train(self, docs: list, num_iterations: int):
         self._init_params(docs)
-        for _ in tqdm.tqdm(range(num_iterations)):
+        for iter_num in tqdm.tqdm(range(num_iterations)):
             self._train_loop(docs)
+            self._save_model_if_required(iteration=iter_num)
+        self._save_model_if_required(iteration=num_iterations)
+        self._clean_up()
 
     
     def _init_params(self, docs: list):
@@ -175,6 +183,7 @@ class HMMTrainer:
         self.topic_assignments = [[0 for _ in range(len(d))] for d in docs] # z_i_j
         self.topicwise_word_count_for_doc = np.zeros((D, T)) # n_d_z
         self._impluse_fn_vector = np.zeros((C))
+        self._last_saved_path = None
 
         for doc_id, doc in enumerate(docs):
             last_class = HMM.HMM_CLASS_FOR_START_END_MARKER
@@ -188,21 +197,29 @@ class HMMTrainer:
                 self._update_counts(doc_id, topic_id, word_id, last_class, cur_class, count=1)
                 last_class = cur_class
 
-            self.hmm.transision_count[last_class, HMM.HMM_CLASS_FOR_START_END_MARKER] += 1
+            self.hmm.transition_count[last_class, HMM.HMM_CLASS_FOR_START_END_MARKER] += 1
             self.hmm.wc_classes[HMM.HMM_CLASS_FOR_START_END_MARKER] += 1
             del last_class
 
 
+    def _clean_up(self):
+        del self.class_assignments
+        del self.topic_assignments
+        del self.topicwise_word_count_for_doc
+        del self._impluse_fn_vector
+        del self._last_saved_path
+
+
     def _update_counts(self, doc_id, topic_id, word_id, last_class, cur_class, count):
         self.topicwise_word_count_for_doc[doc_id][topic_id] += count
-        self.hmm.transision_count[last_class, cur_class] += count
+        self.hmm.transition_count[last_class, cur_class] += count
         self.hmm.wordwise_count_in_topic[topic_id, word_id] += count
         self.hmm.wordwise_count_in_class[cur_class, word_id] += count
         self.hmm.wc_topics[topic_id] += count
         self.hmm.wc_classes[cur_class] += count
 
 
-    def get_cond_topic_dist(self, topicwise_word_count: np.ndarray, cur_class: int, word_id: int):
+    def _get_cond_topic_dist(self, topicwise_word_count: np.ndarray, cur_class: int, word_id: int):
         V = self.hmm.vocab_size
         p_z = (topicwise_word_count + self.hmm.alpha)
         p_z_t2 = None 
@@ -215,9 +232,9 @@ class HMMTrainer:
         return p_z, p_z_t2
 
 
-    def get_cond_class_dist(self, last_class: int, cur_class: int, next_class: int, topic_id: int, word_id: int, p_z_t2: np.ndarray = None):
+    def _get_cond_class_dist(self, last_class: int, cur_class: int, next_class: int, topic_id: int, word_id: int, p_z_t2: np.ndarray = None):
         V, C = self.hmm.vocab_size, self.hmm.num_classes
-        p_c = (self.hmm.transision_count[last_class] + self.hmm.gamma) # second term in class dist eqn
+        p_c = (self.hmm.transition_count[last_class] + self.hmm.gamma) # second term in class dist eqn
         if cur_class == HMM.HMM_CLASS_FOR_TOPIC:
             p_c *= p_z_t2[topic_id] # first term in eqn
         else:
@@ -225,10 +242,10 @@ class HMMTrainer:
         
         if last_class == next_class:
             self._impluse_fn_vector[next_class] = 1
-            p_c *= (self.hmm.transision_count[:, next_class] + self._impluse_fn_vector + self.hmm.gamma)
+            p_c *= (self.hmm.transition_count[:, next_class] + self._impluse_fn_vector + self.hmm.gamma)
             self._impluse_fn_vector[next_class] = 0
         else:
-            p_c *= (self.hmm.transision_count[:, next_class] + self.hmm.gamma)
+            p_c *= (self.hmm.transition_count[:, next_class] + self.hmm.gamma)
 
         self._impluse_fn_vector[last_class] = 1
         p_c /=  (self.hmm.wc_classes + self._impluse_fn_vector + C * self.hmm.gamma)
@@ -238,9 +255,9 @@ class HMMTrainer:
         return p_c
 
 
-    def get_cond_topic_and_class_dist(self, topicwise_word_count: np.ndarray, last_class: int, cur_class: int, next_class: int, topic_id: int, word_id: int):
-        p_z, p_z_t2 = self.get_cond_topic_dist(topicwise_word_count, cur_class, word_id)
-        p_c = self.get_cond_class_dist(last_class, cur_class, next_class, topic_id, word_id, p_z_t2)
+    def _get_cond_topic_and_class_dist(self, topicwise_word_count: np.ndarray, last_class: int, cur_class: int, next_class: int, topic_id: int, word_id: int):
+        p_z, p_z_t2 = self._get_cond_topic_dist(topicwise_word_count, cur_class, word_id)
+        p_c = self._get_cond_class_dist(last_class, cur_class, next_class, topic_id, word_id, p_z_t2)
         return p_z, p_c
 
 
@@ -259,7 +276,7 @@ class HMMTrainer:
 
                 # New topic and class assignments  
                 next_class = self.class_assignments[doc_id][w_ind + 1] if w_ind + 1 < len(doc) else HMM.HMM_CLASS_FOR_START_END_MARKER
-                p_z, p_c = self.get_cond_topic_and_class_dist(
+                p_z, p_c = self._get_cond_topic_and_class_dist(
                     self.topicwise_word_count_for_doc[doc_id],
                     last_class, cur_class, next_class, 
                     topic_id, word_id
@@ -277,7 +294,20 @@ class HMMTrainer:
                 last_class = old_class
                 last_class_new = cur_class
                 
-            self.hmm.transision_count[old_class, HMM.HMM_CLASS_FOR_START_END_MARKER] -= 1
-            self.hmm.transision_count[new_class, HMM.HMM_CLASS_FOR_START_END_MARKER] += 1
+            self.hmm.transition_count[old_class, HMM.HMM_CLASS_FOR_START_END_MARKER] -= 1
+            self.hmm.transition_count[new_class, HMM.HMM_CLASS_FOR_START_END_MARKER] += 1
 
             del old_class, new_class # just for safeguarding
+
+
+    def _save_model_if_required(self, iteration: int):
+        if (self.model_save_path is None) or (iteration % self.save_every != 0) or (iteration == 0):
+            return
+        
+        save_dir_path = os.path.join(self.model_save_path, f'iteration_{iteration}')
+        self.hmm.save(save_dir_path)
+
+        if self.only_keep_latest and self._last_saved_path is not None:
+            shutil.rmtree(self._last_saved_path)
+
+        self._last_saved_path = save_dir_path

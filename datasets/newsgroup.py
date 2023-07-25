@@ -64,7 +64,8 @@ class NewsgroupDataset:
                             break
                     else:
                         doc.append('<UNK>')
-            docs.append(doc)
+            if doc:
+                docs.append(doc)
         return docs
     
 

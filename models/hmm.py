@@ -69,10 +69,8 @@ class HMM:
             'num_topics': self.num_topics,
             'num_classes': self.num_classes,
         }
-
         with open(os.path.join(path, 'non_np_items.pkl'), 'wb') as fp:
             pickle.dump(non_np_items, fp)
-
 
 
     @classmethod
@@ -100,7 +98,6 @@ class HMM:
 
         return hmm
 
-
         
     def get_probability_dists(self):
         unk_word_id = self.vocab_map['<UNK>']
@@ -116,7 +113,6 @@ class HMM:
         topic_prob = filtered_topic_prob / np.sum(filtered_topic_prob, axis=1, keepdims=True)
 
         trans_prob = self.transision_count / np.sum(self.transision_count, axis=1, keepdims=True)
-        
         return trans_prob, class_prob, topic_prob
 
 
@@ -153,6 +149,7 @@ class HMM:
         reverse_vocab_map = self.get_reverse_vocab_map()
         top_k_words = np.argsort(self.wordwise_count_in_class[class_id])[:-k-1:-1]
         return [reverse_vocab_map[word_id] for word_id in top_k_words]
+
         
 
 

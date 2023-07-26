@@ -129,7 +129,7 @@ class HMM:
             c = HMM.HMM_CLASS_FOR_START_END_MARKER
             theta_d = np.random.dirichlet(self.alpha * np.ones(self.num_topics))
             for _ in range(doc_len):
-                if c == HMM_CLASS_FOR_TOPIC:
+                if c == HMM.HMM_CLASS_FOR_TOPIC:
                     topic = int(np.random.multinomial(1, theta_d).argmax())
                     word = int(np.random.multinomial(1, topic_prob[topic]).argmax())
                 else:

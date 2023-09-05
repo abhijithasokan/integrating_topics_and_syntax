@@ -127,6 +127,9 @@ fabric.properties
 # Azure Toolkit for IntelliJ plugin
 # https://plugins.jetbrains.com/plugin/8053-azure-toolkit-for-intellij
 .idea/**/azureSettings.xml
+*/checkpoints/*
+
+.DS_Store
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
@@ -235,6 +238,13 @@ target/
 #   pdm stores project-wide configurations in .pdm.toml, but it is recommended to not include it
 #   in version control.
 #   https://pdm.fming.dev/#use-with-ide
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+
 .pdm.toml
 
 # PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm

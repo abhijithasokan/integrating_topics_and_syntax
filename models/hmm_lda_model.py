@@ -46,7 +46,7 @@ class HMM_LDA_Model:
 
     def init_dir(self):
         training_date = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
-        dir_name = f"{training_date}_{self.alpha}_{self.beta}_{self.gamma}_{self.delta}_{self.num_topics}_{self.num_classes}_{self.num_iterations}_{self.dataset}"
+        dir_name = f"{self.alpha}_{self.beta}_{self.gamma}_{self.delta}_{self.num_topics}_{self.num_classes}_{self.num_iterations}_{self.dataset}"
         self.__output_dir = os.path.join("out", dir_name)
         Path(self.__output_dir).mkdir(exist_ok=True)
 

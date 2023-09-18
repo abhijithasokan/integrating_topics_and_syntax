@@ -7,6 +7,7 @@ import pandas as pd
 import re
 import os
 import pathlib
+import nltk
 
 
 def pre_process_docs_before_vocab(nlp, unprocessed_docs):
@@ -14,11 +15,15 @@ def pre_process_docs_before_vocab(nlp, unprocessed_docs):
     patterns_and_replacements = {
         '<EMAIL>' : re.compile(r'^[\w\.-]+@[\w\.-]+\.\w+$')
     }
+    nltk.download("stopwords")
+    stopwords = nltk.corpus.stopwords.words("english")
 
     for udoc in tqdm.tqdm(nlp.pipe(unprocessed_docs, batch_size=64), total=len(unprocessed_docs)):
         doc = []
         for token in udoc:
-            if token.is_alpha:
+            if token.text.lower() in stopwords:
+                continue
+            elif token.is_alpha:
                 doc.append(token.text.lower())
             elif token.is_punct:
                 # since punctuation would be one of the syntactic classes
@@ -81,7 +86,7 @@ def preprocess_data(size):
     docs = pre_process_docs_before_vocab(nlp, unprocessed_docs)
     processed_docs = []
 
-    vocab = build_vocab(docs, rare_words_threshold=1)
+    vocab = build_vocab(docs, rare_words_threshold=2)
     docs, vocab = remove_out_of_vocab_tokens(docs, vocab)
     words = list(vocab.keys())
     for doc in tqdm.tqdm(docs):

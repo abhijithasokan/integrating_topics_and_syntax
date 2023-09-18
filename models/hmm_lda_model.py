@@ -42,9 +42,10 @@ class HMM_LDA_Model:
         self.num_classes = num_classes
         self.dataset = dataset
         self.init_counts()
+        self.init_dir()
 
     def init_dir(self):
-        training_date = datetime.datetime.now().isoformat()
+        training_date = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
         dir_name = f"{training_date}_{self.alpha}_{self.beta}_{self.gamma}_{self.delta}_{self.num_topics}_{self.num_classes}_{self.num_iterations}_{self.dataset}"
         self.__output_dir = os.path.join("out", dir_name)
         Path(self.__output_dir).mkdir(exist_ok=True)
@@ -171,16 +172,24 @@ class HMM_LDA_Model:
 
     def train(self):
         self.run_counts()
-        for i in tqdm(range(self.num_iterations)):
+        for i in tqdm(range(1, self.num_iterations + 1)):
             for d, doc in enumerate(self.docs):
                 for w, word in enumerate(doc):
                     doc_size = len(doc)
                     self.draw_class(d, w, word, doc_size)
                     self.draw_topic(d, w, word)
 
-            if i > 2000 and not i % 100:
-                self.save_model_generation(i)
+            if i > 2000 and not i % 200:
+                self.save_iteration_model(i)
         self.save()
+
+    def save_iteration_model(self, i):
+        dir_src = os.path.join(self.__output_dir, f"iter_{i}")
+        Path(dir_src).mkdir(exist_ok=True)
+        np.savetxt(os.path.join(dir_src, THETA_FILE), self.doc_topic_counts)
+        np.savetxt(os.path.join(dir_src, PHI_C_FILE), self.class_word_counts)
+        np.savetxt(os.path.join(dir_src, PHI_Z_FILE), self.topic_word_counts)
+        np.savetxt(os.path.join(dir_src, PI_FILE), self.transitions_counts)
 
     def save_model_generation(self, i):
         filename = os.path.join(self.__output_dir, f"{i}_doc")

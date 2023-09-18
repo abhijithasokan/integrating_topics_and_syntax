@@ -6,6 +6,7 @@ import pandas as pd
 import re
 
 
+
 class NewsgroupDataset:
     def __init__(self, num_docs: int = None, rare_words_threshold: int = 1):
         data = fetch_20newsgroups(subset="train", remove=('headers', 'footers', 'quotes'))

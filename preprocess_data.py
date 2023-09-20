@@ -40,6 +40,8 @@ def pre_process_docs_before_vocab(nlp, unprocessed_docs):
                     if pattern.match(token.text):
                         doc.append(replacement)
                         break
+                    else:
+                        doc.append('<UNK>')
 
         docs.append(doc)
     return docs
@@ -87,14 +89,18 @@ def preprocess_data(size):
     processed_docs = []
 
     vocab = build_vocab(docs, rare_words_threshold=2)
-    docs, vocab = remove_out_of_vocab_tokens(docs, vocab)
+    #docs, vocab = remove_out_of_vocab_tokens(docs, vocab)
     words = list(vocab.keys())
+    oov_idx = words.index('<UNK>')
     for doc in tqdm.tqdm(docs):
         doc_words = []
         for word in doc:
             if word in words:
                 word_idx = words.index(word)
                 doc_words.append(word_idx)
+            else:
+                doc_words.append(oov_idx)
+
         processed_docs.append(doc_words)
 
     save_data(processed_docs, words, size)

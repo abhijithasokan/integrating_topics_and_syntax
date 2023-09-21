@@ -69,7 +69,6 @@ class Evaluator:
         prev_class_counts = self.class_word_counts[:, self.vocab.index('.')]
         prev_class_distribution = prev_class_counts / np.sum(prev_class_counts)
         total_log_likelihood = 0.0
-        total_log2_likelihood = 0.0
         rng = Generator(PCG64())
         theta_d = rng.dirichlet(self.alpha * np.ones(self.num_topics))
         for word in document:
@@ -77,11 +76,9 @@ class Evaluator:
                                                                                         theta_d)
             log_marginal = math.log(word_probability) if word_probability > 0.0 else math.log(self.eps)
             total_log_likelihood -= log_marginal
-            log_2_probability = math.log2(word_probability) if word_probability > 0.0 else math.log2(self.eps)
-            total_log2_likelihood -= log_2_probability
 
         try:
-            perplexity = 2 ** (total_log2_likelihood / len(document))
+            perplexity = math.exp(total_log_likelihood / len(document))
         except Exception as e:
             print(f"Couldn't compute perplexity because: document length: {len(document)}, so an exception: {str(e)} occured")
         return total_log_likelihood, perplexity

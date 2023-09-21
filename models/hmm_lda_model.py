@@ -189,7 +189,7 @@ class HMM_LDA_Model:
             self.draw_topic(d, w, word)
 
     def save_iteration_model(self, i):
-        dir_src = os.path.join(self.__output_dir, f"iter_{i}")
+        dir_src = os.path.join(self.__output_dir, f"{i}")
         Path(dir_src).mkdir(exist_ok=True)
         np.savetxt(os.path.join(dir_src, THETA_FILE), self.doc_topic_counts)
         np.savetxt(os.path.join(dir_src, PHI_C_FILE), self.class_word_counts)

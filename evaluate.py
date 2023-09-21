@@ -78,9 +78,9 @@ def remove_out_of_vocab_tokens(docs, vocab):
 def evaluate(alpha: float, beta: float, gamma: float, delta: float, num_iter: int, num_topics: int, num_classes: int,
              iteration: int, dataset: str):
     evaluator = Evaluator(alpha, beta, gamma, delta, dataset, num_topics, num_classes, num_iter, iteration)
-    data = fetch_20newsgroups(subset="train", remove=('headers', 'footers', 'quotes'))
+    data = fetch_20newsgroups(subset="test", remove=('headers', 'footers', 'quotes'))
     nlp = spacy.load("en_core_web_sm")
-    unprocessed_docs = data['data'][:200]
+    unprocessed_docs = data['data'][:20]
     docs = pre_process_docs_before_vocab(nlp, unprocessed_docs)
     vocab = build_vocab(docs, 3)
     docs, vocab = remove_out_of_vocab_tokens(docs, vocab)

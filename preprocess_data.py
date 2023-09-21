@@ -63,8 +63,8 @@ def remove_out_of_vocab_tokens(docs, vocab):
     return docs, vocab
 
 
-def save_data(docs, words, size):
-    dir_name = os.path.join(".", f"data{size}")
+def save_data(docs, words, size, dset):
+    dir_name = os.path.join(".", f"{dset}_{size}")
     pathlib.Path(dir_name).mkdir()
     with open(os.path.join(dir_name, "documents.txt"), "x") as documents_file:
         documents = ''
@@ -79,10 +79,22 @@ def save_data(docs, words, size):
 
 @click.command()
 @click.option("--size", type=int, default=100)
-def preprocess_data(size):
-    data = fetch_20newsgroups(subset="train", remove=('headers', 'footers', 'quotes'))
+@click.option("--dset", type=str, default='nips')
+def preprocess_data(size, dset=None):
+    if dset=='news':
+        data = fetch_20newsgroups(subset="train", remove=('headers', 'footers', 'quotes'))
+        unprocessed_docs = data['data'][:size]
+    elif dset=='nips':
+        papers = pd.read_csv("datasets/nips/papers.csv")
+        # remove columns
+        papers = papers.drop(columns=['id', 'title', 'abstract', 
+                              'event_type', 'pdf_name', 'year'], axis=1)
+        # sample only 100 papers
+        papers = papers.sample(size)
+        unprocessed_docs = papers.paper_text.values.tolist()
+        
+
     nlp = spacy.load("en_core_web_sm")
-    unprocessed_docs = data['data'][:size]
     docs = pre_process_docs_before_vocab(nlp, unprocessed_docs)
     processed_docs = []
 
@@ -101,7 +113,7 @@ def preprocess_data(size):
 
         processed_docs.append(doc_words)
 
-    save_data(processed_docs, words, size)
+    save_data(processed_docs, words, size, dset)
 
 
 if __name__ == "__main__":

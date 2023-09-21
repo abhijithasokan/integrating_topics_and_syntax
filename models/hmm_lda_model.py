@@ -1,5 +1,6 @@
 import datetime
-
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from itertools import repeat
 import numpy as np
 from tqdm import tqdm
 from pathlib import Path
@@ -48,7 +49,7 @@ class HMM_LDA_Model:
         training_date = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
         dir_name = f"{self.alpha}_{self.beta}_{self.gamma}_{self.delta}_{self.num_topics}_{self.num_classes}_{self.num_iterations}_{self.dataset}"
         self.__output_dir = os.path.join("out", dir_name)
-        Path(self.__output_dir).mkdir(exist_ok=True)
+        Path(self.__output_dir).mkdir(exist_ok=True,parents=True)
 
     def init_counts(self):
         self.doc_topic_counts = np.zeros((self.num_docs, self.num_topics))
@@ -173,15 +174,19 @@ class HMM_LDA_Model:
     def train(self):
         self.run_counts()
         for i in tqdm(range(1, self.num_iterations + 1)):
-            for d, doc in enumerate(self.docs):
-                for w, word in enumerate(doc):
-                    doc_size = len(doc)
-                    self.draw_class(d, w, word, doc_size)
-                    self.draw_topic(d, w, word)
+            with ProcessPoolExecutor(max_workers=10) as executor:
+                futures = executor.map(
+                    self.fancy_counting,range(len(self.docs)),self.docs)
 
             if i > 2000 and not i % 200:
                 self.save_iteration_model(i)
         self.save()
+
+    def fancy_counting(self, d, doc):
+        for w, word in enumerate(doc):
+            doc_size = len(doc)
+            self.draw_class(d, w, word, doc_size)
+            self.draw_topic(d, w, word)
 
     def save_iteration_model(self, i):
         dir_src = os.path.join(self.__output_dir, f"iter_{i}")

@@ -1,13 +1,12 @@
-import click
-from sklearn.datasets import fetch_20newsgroups
-import spacy
-import tqdm
-from collections import Counter
-import pandas as pd
-import re
-import os
-import pathlib
 
+from collections import Counter
+
+import spacy
+from sklearn.datasets import fetch_20newsgroups
+import tqdm
+import re
+from models.evaluator import Evaluator
+import click
 
 def pre_process_docs_before_vocab(nlp, unprocessed_docs):
     docs = []
@@ -63,49 +62,37 @@ def remove_out_of_vocab_tokens(docs, vocab):
     return docs, vocab
 
 
-def save_data(docs, words, size):
-    dir_name = os.path.join(".", f"data{size}")
-    pathlib.Path(dir_name).mkdir()
-    with open(os.path.join(dir_name, "documents.txt"), "x") as documents_file:
-        documents = ''
-        for doc in docs:
-            doc_str = [str(w) for w in doc]
-            documents += f"{' '.join(doc_str)}\n"
-        documents_file.writelines(documents)
-
-    with open(os.path.join(dir_name, 'vocab.txt'), "x") as vocab_file:
-        vocabulary = ' '.join(words)
-        vocab_file.write(vocabulary)
-
 @click.command()
-@click.option("--size", type=int, default=100)
-def preprocess_data(size):
+
+@click.option("--alpha", type=float, default=0.1)
+@click.option("--beta", type=float, default=0.01)
+@click.option("--gamma", type=float, default=0.1)
+@click.option("--delta", type=float, default=0.1)
+@click.option("--num_topics", type=int, default=30)
+@click.option("--num_classes", type=int, default=10)
+@click.option("--num_iter", type=int, default=6000)
+@click.option("--iteration", type=int, default=4000)
+@click.option("--dataset", type=str, default="data2000")
+
+
+def evaluate(alpha: float, beta: float, gamma: float, delta: float, num_iter: int, num_topics: int, num_classes: int,
+             iteration: int, dataset: str):
+    evaluator = Evaluator(alpha, beta, gamma, delta, dataset, num_topics, num_classes, num_iter, iteration)
     data = fetch_20newsgroups(subset="train", remove=('headers', 'footers', 'quotes'))
     nlp = spacy.load("en_core_web_sm")
-    unprocessed_docs = data['data'][:size]
+    unprocessed_docs = data['data'][:200]
     docs = pre_process_docs_before_vocab(nlp, unprocessed_docs)
-    processed_docs = []
-
-    vocab = build_vocab(docs, rare_words_threshold=2)
-    #docs, vocab = remove_out_of_vocab_tokens(docs, vocab)
-    words = list(vocab.keys())
-    oov_idx = words.index('<UNK>')
-    for doc in tqdm.tqdm(docs):
-        doc_words = []
-        for word in doc:
-            if word in words:
-                word_idx = words.index(word)
-                doc_words.append(word_idx)
-            else:
-                doc_words.append(oov_idx)
-
-        processed_docs.append(doc_words)
-
-    save_data(processed_docs, words, size)
+    vocab = build_vocab(docs, 3)
+    docs, vocab = remove_out_of_vocab_tokens(docs, vocab)
+    log_probability, perplexity = evaluator.calculate_corpus_likelihood(docs)
+    print(f"Log probability: {log_probability}, perplexity: {perplexity}")
 
 
-if __name__ == "__main__":
-    preprocess_data()
+
+
+
+if __name__ == '__main__':
+    evaluate()
 
 
 

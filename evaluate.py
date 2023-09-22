@@ -73,19 +73,21 @@ def remove_out_of_vocab_tokens(docs, vocab):
 @click.option("--num_iter", type=int, default=6000)
 @click.option("--iteration", type=int, default=4000)
 @click.option("--dataset", type=str, default="data2000")
+@click.option("--test_dataset", type=str, default="test")
+@click.option("--test_dataset_size", type=int, default=2000)
 
 
 def evaluate(alpha: float, beta: float, gamma: float, delta: float, num_iter: int, num_topics: int, num_classes: int,
-             iteration: int, dataset: str):
+             iteration: int, dataset: str, test_dataset: str, test_dataset_size: int):
     evaluator = Evaluator(alpha, beta, gamma, delta, dataset, num_topics, num_classes, num_iter, iteration)
-    data = fetch_20newsgroups(subset="train", remove=('headers', 'footers', 'quotes'))
+    data = fetch_20newsgroups(subset=test_dataset, remove=('headers', 'footers', 'quotes'))
     nlp = spacy.load("en_core_web_sm")
-    unprocessed_docs = data['data'][:200]
+    unprocessed_docs = data['data'][:test_dataset_size]
     docs = pre_process_docs_before_vocab(nlp, unprocessed_docs)
-    vocab = build_vocab(docs, 3)
+    vocab = build_vocab(docs, 2)
     docs, vocab = remove_out_of_vocab_tokens(docs, vocab)
     log_probability, perplexity = evaluator.calculate_corpus_likelihood(docs)
-    print(f"Log probability: {log_probability}, perplexity: {perplexity}")
+    print(f"Log likelihood: {log_probability}, perplexity: {perplexity}")
 
 
 

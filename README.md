@@ -51,6 +51,16 @@ python doc_classifier.py
 ```
 Where the `theta.txt` contains the document topic counts. And the `skipped_indices.txt` files contains the list of indices of documents you skipped when training our model. 
 
+## Topic Coherence score
+Creates a plot of topic coherence score against iterations calculated using gensim. One must supply correct directory containing phi_z.txt file.
+```python
+python metrics.py
+```
+## Pure LDA
+Trains a ldamodel in gensim on supplied data. Creates a plot of coherence against number of topics.
+```python
+python pure_lda.py
+```
 
 
 

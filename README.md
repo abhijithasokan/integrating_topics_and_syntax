@@ -11,6 +11,8 @@ Setup an environment in conda or pip and install the below packages
   - pandas
   - matplotlib
   - nltk
+  - gensim
+  - tqdm
 
 # Setting up the dataset
 ## Preprocessing 

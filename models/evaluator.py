@@ -16,7 +16,7 @@ PI_FILE = "pi.txt"
 
 
 class Evaluator:
-    def __init__(self, alpha, beta, gamma, delta, dataset: str, num_topics: int, num_classes: int, num_iterations: int, iteration: int):
+    def __init__(self, alpha, beta, gamma, delta, dataset: str, num_topics: int, num_classes: int, path: str):
         self.alpha = alpha
         self.beta = beta
         self.gamma = gamma
@@ -24,8 +24,6 @@ class Evaluator:
         self.dataset = dataset
         self.num_topics = num_topics
         self.num_classes = num_classes
-        self.num_iterations = num_iterations
-        self.iteration = iteration
         size = int(re.search(r'\d+', dataset).group())
         data_loader = DataLoader(size)
         self.documents, self.vocab = data_loader.load_data_from_local()
@@ -35,7 +33,7 @@ class Evaluator:
 
     def load(self):
         dir_name = os.path.join("out",
-                                f"{self.alpha}_{self.beta}_{self.gamma}_{self.delta}_{self.num_topics}_{self.num_classes}_{self.num_iterations}_{self.dataset}", str(self.iteration))
+                                f"{self.alpha}_{self.beta}_{self.gamma}_{self.delta}_{self.num_topics}_{self.num_classes}_{self.num_iterations}_{self.dataset}", self.path)
 
         self.class_word_counts = np.loadtxt(os.path.join(dir_name, PHI_C_FILE))
         self.topic_word_counts = np.loadtxt(os.path.join(dir_name, PHI_Z_FILE))
@@ -61,7 +59,7 @@ class Evaluator:
         class_word_prob_ties = class_counts / np.sum(class_counts) if np.sum(class_counts) > 0.0 else class_counts
         topic_counts = self.topic_word_counts[:, word_idx]
         topic_probabilities = topic_counts / np.sum(topic_counts) if np.sum(topic_counts) > 0 else topic_counts
-        word_probability = np.sum(class_probabilities[1:] * class_word_prob_ties[1:]) + 1.0 \
+        word_probability = np.sum(class_probabilities[1:] * class_word_prob_ties[1:]) + class_probabilities[0] \
             * np.sum(topic_probabilities * topic_distribution)
         return class_probabilities, word_probability
 
@@ -85,17 +83,17 @@ class Evaluator:
 
     def calculate_corpus_likelihood(self, corpus):
         average_likelihood = 0.0
-        average_perplexity = 0.0
+        average_perplexities = []
         count = 0
         for doc in corpus:
             if len(doc) == 0:
                 continue
             likelihood, perplexity = self.calculate_document_likelihood(doc)
             average_likelihood += likelihood
-            average_perplexity += perplexity
+            average_perplexities.append(perplexity)
             count += 1
         average_likelihood /= count
-        average_perplexity /= count
+        average_perplexity = sum(average_perplexities) / count
         return average_likelihood, average_perplexity
 
     def default_zero(self):

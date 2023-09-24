@@ -70,16 +70,15 @@ def remove_out_of_vocab_tokens(docs, vocab):
 @click.option("--delta", type=float, default=0.1)
 @click.option("--num_topics", type=int, default=30)
 @click.option("--num_classes", type=int, default=10)
-@click.option("--num_iter", type=int, default=6000)
-@click.option("--iteration", type=int, default=4000)
+@click.option("--path", type=int, default=6000)
 @click.option("--dataset", type=str, default="data2000")
 @click.option("--test_dataset", type=str, default="test")
 @click.option("--test_dataset_size", type=int, default=2000)
 
 
-def evaluate(alpha: float, beta: float, gamma: float, delta: float, num_iter: int, num_topics: int, num_classes: int,
-             iteration: int, dataset: str, test_dataset: str, test_dataset_size: int):
-    evaluator = Evaluator(alpha, beta, gamma, delta, dataset, num_topics, num_classes, num_iter, iteration)
+def evaluate(alpha: float, beta: float, gamma: float, delta: float, num_topics: int, num_classes: int,
+             path:str, dataset: str, test_dataset: str, test_dataset_size: int):
+    evaluator = Evaluator(alpha, beta, gamma, delta, dataset, num_topics, num_classes, path)
     data = fetch_20newsgroups(subset=test_dataset, remove=('headers', 'footers', 'quotes'))
     nlp = spacy.load("en_core_web_sm")
     unprocessed_docs = data['data'][:test_dataset_size]

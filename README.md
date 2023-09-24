@@ -50,3 +50,10 @@ python doc_classifier.py
   --train_test_split <split-fraction>
 ```
 Where the `theta.txt` contains the document topic counts. And the `skipped_indices.txt` files contains the list of indices of documents you skipped when training our model. 
+
+
+
+
+# References
+- [LDA from scratch](https://www.depends-on-the-definition.com/lda-from-scratch/#how-do-we-find-theta-and-varphi-gibbs-sampling)
+

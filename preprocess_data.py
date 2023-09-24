@@ -78,11 +78,14 @@ def save_data(docs, words, size, dset):
         vocab_file.write(vocabulary)
 
 @click.command()
-@click.option("--size", type=int, default=100)
-@click.option("--dset", type=str, default='nips')
+@click.option("--size", type=int, default=5100)
+@click.option("--dset", type=str, default='news')
 def preprocess_data(size, dset=None):
     if dset=='news':
-        data = fetch_20newsgroups(subset="train", remove=('headers', 'footers', 'quotes'))
+        data = fetch_20newsgroups(subset="train", remove=('headers', 'footers', 'quotes'),
+                                  categories=['alt.atheism','sci.med','sci.space','sci.electronics',
+                                              'talk.politics.guns','comp.graphics','rec.motorcycles',
+                                              'comp.graphics','soc.religion.christian','comp.os.ms-windows.misc'])
         unprocessed_docs = data['data'][:size]
     elif dset=='nips':
         papers = pd.read_csv("datasets/nips/papers.csv")
